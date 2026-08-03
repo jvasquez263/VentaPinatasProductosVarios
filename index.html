@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Piñatería Fiesta Mágica 🪅</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
     body { font-family: 'Nunito', sans-serif; }
@@ -13,6 +14,64 @@
       -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
       overflow: hidden;
+    }
+    /* Estilos de galería tipo Amazon */
+    .galeria-principal {
+      aspect-ratio: 1;
+      object-fit: cover;
+      border-radius: 0.75rem;
+      cursor: zoom-in;
+      transition: transform 0.3s ease;
+    }
+    .galeria-principal:hover {
+      transform: scale(1.02);
+    }
+    .miniatura {
+      aspect-ratio: 1;
+      object-fit: cover;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: all 0.2s ease;
+    }
+    .miniatura:hover {
+      border-color: #ec4899;
+      transform: scale(1.05);
+    }
+    .miniatura.activa {
+      border-color: #ec4899;
+      box-shadow: 0 0 0 2px #fce7f3;
+    }
+    /* Modal de imagen ampliada */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    .modal-overlay.activo {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .modal-img {
+      max-width: 90vw;
+      max-height: 90vh;
+      object-fit: contain;
+      border-radius: 0.75rem;
+    }
+    /* Animación de entrada */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .anim-entrada {
+      animation: fadeInUp 0.5s ease forwards;
     }
   </style>
 </head>
@@ -59,17 +118,108 @@
     </div>
   </section>
 
+  <!-- Modal de detalle de producto (estilo Amazon) -->
+  <div id="modal-producto" class="fixed inset-0 bg-black/60 z-40 hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto shadow-2xl anim-entrada">
+      <div class="sticky top-0 bg-white z-10 flex justify-between items-center p-4 border-b">
+        <h3 id="modal-titulo" class="text-xl font-bold text-gray-800"></h3>
+        <button onclick="cerrarModal()" class="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-xl">✕</button>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-8 p-6">
+        <!-- Galería tipo Amazon -->
+        <div class="space-y-4">
+          <!-- Imagen principal -->
+          <div class="relative bg-gray-50 rounded-xl overflow-hidden">
+            <img id="modal-img-principal" src="" alt="" class="galeria-principal w-full" onclick="abrirZoom()">
+            <div class="absolute top-3 right-3 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-xs font-semibold text-gray-600">
+              <i class="fas fa-search-plus mr-1"></i> Click para ampliar
+            </div>
+          </div>
+
+          <!-- Miniaturas -->
+          <div id="modal-miniaturas" class="flex gap-3 overflow-x-auto pb-2"></div>
+        </div>
+
+        <!-- Info del producto -->
+        <div class="space-y-6">
+          <div>
+            <span id="modal-tamano" class="inline-block bg-pink-100 text-pink-700 text-sm font-semibold px-3 py-1 rounded-full mb-3"></span>
+            <h2 id="modal-nombre" class="text-2xl font-bold text-gray-800 mb-2"></h2>
+            <div class="flex items-center gap-2 mb-3">
+              <div class="flex text-yellow-400 text-sm">
+                <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star-half-alt"></i>
+              </div>
+              <span class="text-sm text-gray-500">(12 reseñas)</span>
+            </div>
+            <p id="modal-desc" class="text-gray-600 leading-relaxed"></p>
+          </div>
+
+          <div class="bg-gray-50 rounded-xl p-6 space-y-4">
+            <div class="flex items-baseline gap-2">
+              <span id="modal-precio" class="text-4xl font-bold text-pink-600"></span>
+              <span class="text-gray-400 line-through text-lg" id="modal-precio-antiguo"></span>
+            </div>
+            <p class="text-green-600 text-sm font-semibold"><i class="fas fa-check-circle mr-1"></i> Disponible para entrega</p>
+
+            <div class="flex items-center gap-4 pt-2">
+              <div class="flex items-center border border-gray-300 rounded-lg">
+                <button onclick="cambiarCantidadModal(-1)" class="w-10 h-10 hover:bg-gray-100 rounded-l-lg font-bold text-lg">−</button>
+                <span id="modal-cantidad" class="w-12 text-center font-bold">1</span>
+                <button onclick="cambiarCantidadModal(1)" class="w-10 h-10 hover:bg-gray-100 rounded-r-lg font-bold text-lg">+</button>
+              </div>
+              <button id="btn-agregar-modal" class="flex-1 bg-gradient-to-r from-pink-600 to-orange-500 text-white font-bold py-3 rounded-xl shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all">
+                <i class="fas fa-shopping-cart mr-2"></i> Agregar al carrito
+              </button>
+            </div>
+          </div>
+
+          <!-- Detalles adicionales -->
+          <div class="border-t pt-4 space-y-3">
+            <div class="flex items-start gap-3">
+              <i class="fas fa-truck text-orange-500 mt-1"></i>
+              <div>
+                <p class="font-semibold text-gray-800">Entrega a domicilio</p>
+                <p class="text-sm text-gray-500">2-3 días hábiles en El Salvador</p>
+              </div>
+            </div>
+            <div class="flex items-start gap-3">
+              <i class="fas fa-shield-alt text-green-500 mt-1"></i>
+              <div>
+                <p class="font-semibold text-gray-800">Garantía de satisfacción</p>
+                <p class="text-sm text-gray-500">Si no te gusta, la rehacemos gratis</p>
+              </div>
+            </div>
+            <div class="flex items-start gap-3">
+              <i class="fas fa-heart text-pink-500 mt-1"></i>
+              <div>
+                <p class="font-semibold text-gray-800">Hecho con amor</p>
+                <p class="text-sm text-gray-500">Cada piñata es única y artesanal</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal zoom de imagen -->
+  <div id="modal-zoom" class="modal-overlay" onclick="cerrarZoom()">
+    <button class="absolute top-6 right-6 text-white text-3xl hover:text-gray-300 z-10">✕</button>
+    <img id="zoom-img" src="" alt="" class="modal-img">
+  </div>
+
   <!-- Pedido -->
   <section id="pedido" class="py-16 px-6 bg-gradient-to-b from-pink-50 to-amber-50">
     <div class="max-w-4xl mx-auto">
       <h2 class="text-3xl font-bold text-center text-gray-800 mb-8">🛒 Tu Pedido</h2>
-      
+
       <div class="bg-white rounded-2xl shadow-lg p-8">
         <div id="carrito-vacio" class="text-center py-12 text-gray-400">
           <div class="text-6xl mb-4">🛒</div>
           <p class="text-lg">Tu carrito está vacío. ¡Selecciona piñatas del catálogo!</p>
         </div>
-        
+
         <div id="carrito-contenido" class="hidden">
           <div id="items-carrito" class="space-y-4 mb-6"></div>
           <div class="border-t pt-4 flex justify-between items-center text-xl font-bold text-gray-800">
@@ -87,7 +237,7 @@
           <input type="text" placeholder="Dirección de entrega" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-pink-500 focus:ring-2 focus:ring-pink-200 outline-none" required>
           <textarea placeholder="¿Alguna indicación especial? (colores, fecha de entrega, etc.)" rows="3" class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-pink-500 focus:ring-2 focus:ring-pink-200 outline-none"></textarea>
           <button type="submit" class="w-full bg-gradient-to-r from-pink-600 to-orange-500 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all text-lg">
-            📲 Enviar Pedido por WhatsApp
+            <i class="fab fa-whatsapp mr-2"></i> Enviar Pedido por WhatsApp
           </button>
           <p class="text-center text-sm text-gray-400 mt-2">Te contactaremos para confirmar tu pedido y coordinar la entrega.</p>
         </form>
@@ -103,12 +253,12 @@
         <div>
           <div class="text-4xl mb-3">💬</div>
           <p class="font-bold text-lg">WhatsApp</p>
-          <p class="text-gray-400">+52 55 1234 5678</p>
+          <p class="text-gray-400">+503 7123 4567</p>
         </div>
         <div>
           <div class="text-4xl mb-3">📍</div>
           <p class="font-bold text-lg">Ubicación</p>
-          <p class="text-gray-400">Ciudad de México</p>
+          <p class="text-gray-400">San Salvador, El Salvador</p>
         </div>
         <div>
           <div class="text-4xl mb-3">📸</div>
@@ -121,47 +271,287 @@
   </section>
 
   <script>
+    // ═══════════════════════════════════════════════════════════════
+    // CONFIGURACIÓN: URL base de tu repositorio de GitHub
+    // Reemplaza esta URL con la de tu repositorio
+    // Ejemplo: "https://raw.githubusercontent.com/TU_USUARIO/pinatas/main/"
+    // ═══════════════════════════════════════════════════════════════
+    const GITHUB_BASE_URL = "https://raw.githubusercontent.com/jvasquez263/VentaPinatasProductosVarios/main/imagenes/";
+
+    // ═══════════════════════════════════════════════════════════════
+    // CATÁLOGO DE PRODUCTOS
+    // Cada producto ahora tiene un array de imágenes
+    // Las imágenes deben estar en tu repositorio de GitHub
+    // ═══════════════════════════════════════════════════════════════
     const productos = [
-      { id: 1, nombre: "Piñata Unicornio Arcoíris", precio: 450, img: "🦄", desc: "Unicornio mágico con colores vibrantes y brillos. Ideal para fiestas infantiles.", tamano: "Mediana (60cm)" },
-      { id: 2, nombre: "Piñata Spider-Man", precio: 380, img: "🕷️", desc: "El héroe favorito de los niños. Diseño detallado con telaraña roja y azul.", tamano: "Mediana (55cm)" },
-      { id: 3, nombre: "Piñata Número Gigante", precio: 520, img: "🔢", desc: "Personalizable con cualquier número. Perfecta para cumpleaños y aniversarios.", tamano: "Grande (80cm)" },
-      { id: 4, nombre: "Piñata Frida Kahlo", precio: 490, img: "🌺", desc: "Homenaje artístico con flores de papel y colores mexicanos tradicionales.", tamano: "Mediana (60cm)" },
-      { id: 5, nombre: "Piñata Dinosaurio T-Rex", precio: 420, img: "🦖", desc: "Dinosaurio verde con escamas detalladas. ¡Los niños lo adoran!", tamano: "Mediana (65cm)" },
-      { id: 6, nombre: "Piñata Corona Dorada", precio: 350, img: "👑", desc: "Elegante corona dorada para fiestas de princesas o eventos especiales.", tamano: "Mediana (50cm)" },
-      { id: 7, nombre: "Piñata Baby Yoda (Grogu)", precio: 460, img: "👽", desc: "El personaje más tierno de la galaxia. Ideal para fans de Star Wars.", tamano: "Mediana (55cm)" },
-      { id: 8, nombre: "Piñata Corona de Flores", precio: 400, img: "🌸", desc: "Diseño floral delicado y colorido. Perfecta para bodas y XV años.", tamano: "Mediana (55cm)" },
-      { id: 9, nombre: "Piñata Personalizada", precio: 600, img: "✨", desc: "¿Tienes una idea? ¡La hacemos realidad! Envíanos tu diseño.", tamano: "A elegir" }
+      {
+        id: 1,
+        nombre: "Piñata Unicornio Arcoíris",
+        precio: 450,
+        precioAntiguo: 520,
+        desc: "Unicornio mágico con colores vibrantes y brillos. Ideal para fiestas infantiles. Hecho a mano con papel crepé de alta calidad y decorado con listones satinados.",
+        tamano: "Mediana (60cm)",
+        // Array de imágenes del mismo producto (vistas diferentes)
+        imagenes: [
+          GITHUB_BASE_URL + "unicornio-1.jpg",
+          GITHUB_BASE_URL + "unicornio-2.jpg",
+          GITHUB_BASE_URL + "unicornio-3.jpg",
+          GITHUB_BASE_URL + "unicornio-4.jpg"
+        ]
+      },
+      {
+        id: 2,
+        nombre: "Piñata Spider-Man",
+        precio: 380,
+        precioAntiguo: 450,
+        desc: "El héroe favorito de los niños. Diseño detallado con telaraña roja y azul. Perfecta para cumpleaños de superhéroes.",
+        tamano: "Mediana (55cm)",
+        imagenes: [
+          GITHUB_BASE_URL + "spiderman-1.jpg",
+          GITHUB_BASE_URL + "spiderman-2.jpg",
+          GITHUB_BASE_URL + "spiderman-3.jpg"
+        ]
+      },
+      {
+        id: 3,
+        nombre: "Piñata Número Gigante",
+        precio: 520,
+        precioAntiguo: 600,
+        desc: "Personalizable con cualquier número. Perfecta para cumpleaños y aniversarios. Decorada con flores de papel y brillantina.",
+        tamano: "Grande (80cm)",
+        imagenes: [
+          GITHUB_BASE_URL + "numero-1.jpg",
+          GITHUB_BASE_URL + "numero-2.jpg",
+          GITHUB_BASE_URL + "numero-3.jpg",
+          GITHUB_BASE_URL + "numero-4.jpg"
+        ]
+      },
+      {
+        id: 4,
+        nombre: "Piñata Frida Kahlo",
+        precio: 490,
+        precioAntiguo: 550,
+        desc: "Homenaje artístico con flores de papel y colores mexicanos tradicionales. Ideal para fiestas temáticas mexicanas.",
+        tamano: "Mediana (60cm)",
+        imagenes: [
+          GITHUB_BASE_URL + "frida-1.jpg",
+          GITHUB_BASE_URL + "frida-2.jpg",
+          GITHUB_BASE_URL + "frida-3.jpg"
+        ]
+      },
+      {
+        id: 5,
+        nombre: "Piñata Dinosaurio T-Rex",
+        precio: 420,
+        precioAntiguo: 480,
+        desc: "Dinosaurio verde con escamas detalladas. ¡Los niños lo adoran! Incluye detalles en 3D para mayor realismo.",
+        tamano: "Mediana (65cm)",
+        imagenes: [
+          GITHUB_BASE_URL + "dinosaurio-1.jpg",
+          GITHUB_BASE_URL + "dinosaurio-2.jpg",
+          GITHUB_BASE_URL + "dinosaurio-3.jpg"
+        ]
+      },
+      {
+        id: 6,
+        nombre: "Piñata Corona Dorada",
+        precio: 350,
+        precioAntiguo: 400,
+        desc: "Elegante corona dorada para fiestas de princesas o eventos especiales. Decorada con gemas de cartulina brillante.",
+        tamano: "Mediana (50cm)",
+        imagenes: [
+          GITHUB_BASE_URL + "corona-1.jpg",
+          GITHUB_BASE_URL + "corona-2.jpg",
+          GITHUB_BASE_URL + "corona-3.jpg"
+        ]
+      },
+      {
+        id: 7,
+        nombre: "Piñata Baby Yoda (Grogu)",
+        precio: 460,
+        precioAntiguo: 520,
+        desc: "El personaje más tierno de la galaxia. Ideal para fans de Star Wars. Ojos grandes y expresivos hechos a mano.",
+        tamano: "Mediana (55cm)",
+        imagenes: [
+          GITHUB_BASE_URL + "babyyoda-1.jpg",
+          GITHUB_BASE_URL + "babyyoda-2.jpg",
+          GITHUB_BASE_URL + "babyyoda-3.jpg"
+        ]
+      },
+      {
+        id: 8,
+        nombre: "Piñata Corona de Flores",
+        precio: 400,
+        precioAntiguo: 460,
+        desc: "Diseño floral delicado y colorido. Perfecta para bodas y XV años. Flores de papel crepé en tonos pastel.",
+        tamano: "Mediana (55cm)",
+        imagenes: [
+          GITHUB_BASE_URL + "flores-1.jpg",
+          GITHUB_BASE_URL + "flores-2.jpg",
+          GITHUB_BASE_URL + "flores-3.jpg"
+        ]
+      },
+      {
+        id: 9,
+        nombre: "Piñata Personalizada",
+        precio: 600,
+        precioAntiguo: 700,
+        desc: "¿Tienes una idea? ¡La hacemos realidad! Envíanos tu diseño y lo convertimos en una piñata única.",
+        tamano: "A elegir",
+        imagenes: [
+          GITHUB_BASE_URL + "personalizada-1.jpg",
+          GITHUB_BASE_URL + "personalizada-2.jpg",
+          GITHUB_BASE_URL + "personalizada-3.jpg"
+        ]
+      }
     ];
 
     let carrito = [];
+    let productoModalActual = null;
+    let imagenModalActual = 0;
+    let cantidadModal = 1;
 
+    // ═══════════════════════════════════════════════════════════════
+    // RENDERIZAR CATÁLOGO
+    // ═══════════════════════════════════════════════════════════════
     function renderCatalogo() {
       const grid = document.getElementById('catalogo-grid');
-      grid.innerHTML = productos.map(p => `
-        <div class="bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-2xl transition-all hover:-translate-y-1 group cursor-pointer" onclick="agregarAlCarrito(${p.id})">
-          <div class="h-48 bg-gradient-to-br from-pink-100 to-orange-100 flex items-center justify-center text-7xl group-hover:scale-110 transition-transform">
-            ${p.img}
-          </div>
-          <div class="p-6">
-            <h3 class="text-lg font-bold text-gray-800 mb-1">${p.nombre}</h3>
-            <p class="text-sm text-gray-500 mb-3">${p.tamano}</p>
-            <p class="text-gray-600 text-sm mb-4 line-clamp-2">${p.desc}</p>
-            <div class="flex justify-between items-center">
-              <span class="text-2xl font-bold text-pink-600">$${p.precio}</span>
-              <button class="bg-pink-100 text-pink-600 px-4 py-2 rounded-full font-semibold text-sm hover:bg-pink-600 hover:text-white transition-colors">Agregar +</button>
+      grid.innerHTML = productos.map(p => {
+        const imgPrincipal = p.imagenes[0];
+        return `
+          <div class="bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-2xl transition-all hover:-translate-y-1 group cursor-pointer" onclick="abrirModalProducto(${p.id})">
+            <div class="relative h-56 bg-gray-100 overflow-hidden">
+              <img src="${imgPrincipal}" alt="${p.nombre}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                   onerror="this.parentElement.innerHTML='<div class=\'h-full flex items-center justify-center text-6xl\'>🪅</div>'">
+              <div class="absolute top-3 left-3 bg-pink-600 text-white text-xs font-bold px-2 py-1 rounded-full">
+                ${p.imagenes.length} fotos
+              </div>
+              <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                <span class="bg-white/90 text-pink-600 font-bold px-4 py-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg">
+                  <i class="fas fa-eye mr-1"></i> Ver detalles
+                </span>
+              </div>
+            </div>
+            <div class="p-5">
+              <div class="flex items-center gap-2 mb-2">
+                <span class="text-xs bg-pink-100 text-pink-700 font-semibold px-2 py-0.5 rounded-full">${p.tamano}</span>
+              </div>
+              <h3 class="text-lg font-bold text-gray-800 mb-1 line-clamp-1">${p.nombre}</h3>
+              <p class="text-gray-500 text-sm mb-3 line-clamp-2">${p.desc}</p>
+              <div class="flex items-baseline gap-2">
+                <span class="text-2xl font-bold text-pink-600">$${p.precio}</span>
+                <span class="text-sm text-gray-400 line-through">$${p.precioAntiguo}</span>
+              </div>
             </div>
           </div>
-        </div>
+        `;
+      }).join('');
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // MODAL DE PRODUCTO (ESTILO AMAZON)
+    // ═══════════════════════════════════════════════════════════════
+    function abrirModalProducto(id) {
+      const producto = productos.find(p => p.id === id);
+      if (!producto) return;
+
+      productoModalActual = producto;
+      imagenModalActual = 0;
+      cantidadModal = 1;
+
+      // Llenar datos
+      document.getElementById('modal-titulo').textContent = producto.nombre;
+      document.getElementById('modal-nombre').textContent = producto.nombre;
+      document.getElementById('modal-desc').textContent = producto.desc;
+      document.getElementById('modal-tamano').textContent = producto.tamano;
+      document.getElementById('modal-precio').textContent = '$' + producto.precio;
+      document.getElementById('modal-precio-antiguo').textContent = '$' + producto.precioAntiguo;
+      document.getElementById('modal-cantidad').textContent = '1';
+
+      // Configurar botón de agregar
+      const btnAgregar = document.getElementById('btn-agregar-modal');
+      btnAgregar.onclick = () => {
+        agregarAlCarrito(producto.id, cantidadModal);
+        cerrarModal();
+      };
+
+      // Renderizar miniaturas
+      renderMiniaturas(producto);
+
+      // Mostrar imagen principal
+      actualizarImagenPrincipal();
+
+      // Mostrar modal
+      document.getElementById('modal-producto').classList.remove('hidden');
+      document.getElementById('modal-producto').classList.add('flex');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function renderMiniaturas(producto) {
+      const contenedor = document.getElementById('modal-miniaturas');
+      contenedor.innerHTML = producto.imagenes.map((img, idx) => `
+        <img src="${img}" alt="Vista ${idx + 1}" 
+             class="miniatura w-16 h-16 md:w-20 md:h-20 flex-shrink-0 ${idx === imagenModalActual ? 'activa' : ''}"
+             onclick="cambiarImagenModal(${idx})"
+             onerror="this.src='https://via.placeholder.com/80?text=Foto+${idx+1}'">
       `).join('');
     }
 
-    function agregarAlCarrito(id) {
+    function cambiarImagenModal(idx) {
+      imagenModalActual = idx;
+      actualizarImagenPrincipal();
+      renderMiniaturas(productoModalActual);
+    }
+
+    function actualizarImagenPrincipal() {
+      const img = document.getElementById('modal-img-principal');
+      img.src = productoModalActual.imagenes[imagenModalActual];
+      img.alt = productoModalActual.nombre + ' - Vista ' + (imagenModalActual + 1);
+    }
+
+    function cambiarCantidadModal(delta) {
+      cantidadModal = Math.max(1, cantidadModal + delta);
+      document.getElementById('modal-cantidad').textContent = cantidadModal;
+    }
+
+    function cerrarModal() {
+      document.getElementById('modal-producto').classList.add('hidden');
+      document.getElementById('modal-producto').classList.remove('flex');
+      document.body.style.overflow = '';
+      productoModalActual = null;
+    }
+
+    // Cerrar modal al hacer clic fuera
+    document.getElementById('modal-producto').addEventListener('click', function(e) {
+      if (e.target === this) cerrarModal();
+    });
+
+    // ═══════════════════════════════════════════════════════════════
+    // ZOOM DE IMAGEN
+    // ═══════════════════════════════════════════════════════════════
+    function abrirZoom() {
+      if (!productoModalActual) return;
+      const zoomImg = document.getElementById('zoom-img');
+      zoomImg.src = productoModalActual.imagenes[imagenModalActual];
+      document.getElementById('modal-zoom').classList.add('activo');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function cerrarZoom() {
+      document.getElementById('modal-zoom').classList.remove('activo');
+      document.body.style.overflow = '';
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // CARRITO DE COMPRAS
+    // ═══════════════════════════════════════════════════════════════
+    function agregarAlCarrito(id, cantidad = 1) {
       const producto = productos.find(p => p.id === id);
       const existente = carrito.find(item => item.id === id);
       if (existente) {
-        existente.cantidad++;
+        existente.cantidad += cantidad;
       } else {
-        carrito.push({ ...producto, cantidad: 1 });
+        carrito.push({ ...producto, cantidad: cantidad });
       }
       actualizarCarrito();
       scrollToSection('pedido');
@@ -172,7 +562,7 @@
       actualizarCarrito();
     }
 
-    function cambiarCantidad(id, delta) {
+    function cambiarCantidadCarrito(id, delta) {
       const item = carrito.find(i => i.id === id);
       if (item) {
         item.cantidad += delta;
@@ -200,20 +590,20 @@
       form.classList.remove('hidden');
 
       itemsDiv.innerHTML = carrito.map(item => `
-        <div class="flex items-center justify-between bg-gray-50 rounded-xl p-4">
-          <div class="flex items-center gap-4">
-            <span class="text-3xl">${item.img}</span>
-            <div>
-              <p class="font-bold text-gray-800">${item.nombre}</p>
-              <p class="text-sm text-gray-500">$${item.precio} c/u</p>
-            </div>
+        <div class="flex items-center gap-4 bg-gray-50 rounded-xl p-4">
+          <img src="${item.imagenes[0]}" alt="${item.nombre}" class="w-16 h-16 object-cover rounded-lg flex-shrink-0"
+               onerror="this.src='https://via.placeholder.com/64?text=🪅'">
+          <div class="flex-1 min-w-0">
+            <p class="font-bold text-gray-800 truncate">${item.nombre}</p>
+            <p class="text-sm text-gray-500">$${item.precio} c/u</p>
           </div>
-          <div class="flex items-center gap-3">
-            <button onclick="cambiarCantidad(${item.id}, -1)" class="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center font-bold">−</button>
+          <div class="flex items-center gap-2">
+            <button onclick="cambiarCantidadCarrito(${item.id}, -1)" class="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center font-bold">−</button>
             <span class="font-bold w-6 text-center">${item.cantidad}</span>
-            <button onclick="cambiarCantidad(${item.id}, 1)" class="w-8 h-8 rounded-full bg-pink-100 hover:bg-pink-200 text-pink-600 flex items-center justify-center font-bold">+</button>
-            <button onclick="quitarDelCarrito(${item.id})" class="ml-2 text-red-400 hover:text-red-600 text-sm">✕</button>
+            <button onclick="cambiarCantidadCarrito(${item.id}, 1)" class="w-8 h-8 rounded-full bg-pink-100 hover:bg-pink-200 text-pink-600 flex items-center justify-center font-bold">+</button>
           </div>
+          <span class="font-bold text-pink-600 min-w-[80px] text-right">$${(item.precio * item.cantidad).toLocaleString()}</span>
+          <button onclick="quitarDelCarrito(${item.id})" class="text-red-400 hover:text-red-600 text-sm ml-2">✕</button>
         </div>
       `).join('');
 
@@ -225,6 +615,9 @@
       document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
     }
 
+    // ═══════════════════════════════════════════════════════════════
+    // FORMULARIO DE PEDIDO POR WHATSAPP
+    // ═══════════════════════════════════════════════════════════════
     document.getElementById('form-pedido').addEventListener('submit', function(e) {
       e.preventDefault();
       const inputs = this.querySelectorAll('input, textarea');
@@ -245,9 +638,18 @@
       mensaje += `%0A*Total: $${total.toLocaleString()}*%0A`;
       if (notas) mensaje += `%0A*Notas:* ${notas}`;
 
-      window.open(`https://wa.me/5215512345678?text=${mensaje}`, '_blank');
+      window.open(`https://wa.me/50371234567?text=${mensaje}`, '_blank');
     });
 
+    // Cerrar modal con Escape
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        cerrarZoom();
+        cerrarModal();
+      }
+    });
+
+    // Inicializar
     renderCatalogo();
   </script>
 
